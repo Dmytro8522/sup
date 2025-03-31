@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+
+<html lang="uk">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Вхід</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+
+</head>
+
+<body>
+
+  <h1>Вхід</h1>
+
+  <form method="POST" action="{{ url_for('auth.login') }}">
+
+    <div>
+
+      <label for="email">Email:</label>
+
+      <input type="email" name="email" id="email" required>
+
+    </div>
+
+    <div>
+
+      <label for="password">Пароль:</label>
+
+      <input type="password" name="password" id="password" required>
+
+    </div>
+
+    <button type="submit">Увійти</button>
+
+  </form>
+
+</body>
+
+</html>

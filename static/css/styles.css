@@ -1,0 +1,95 @@
+/* Общие настройки */
+body {
+  background-color: #f8f9fa;
+  color: #212529;
+  font-family: 'Roboto', sans-serif;
+  margin: 0;
+  padding-top: 20px;
+}
+
+/* Верхняя панель */
+header {
+  background-color: #ffffff;
+  border-bottom: 1px solid #dee2e6;
+}
+header .logo {
+  max-height: 60px;
+}
+.auth-panel button {
+  border-radius: 20px;
+  transition: transform 0.3s ease;
+}
+.auth-panel button:hover {
+  transform: translateY(-2px);
+}
+
+/* Прогресс-бар */
+#progressIndicator {
+  text-align: center;
+}
+#progressBar {
+  transition: width 0.4s ease;
+}
+
+/* Карточки шагов */
+.step-section {
+  background-color: #ffffff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: box-shadow 0.3s ease;
+}
+.step-section:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+.step-title {
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+
+/* Кнопки */
+.btn {
+  border-radius: 4px;
+  transition: transform 0.2s ease;
+}
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+/* Форма бронирования */
+form .form-label {
+  font-weight: 500;
+}
+form .form-control {
+  border-radius: 4px;
+  border: 1px solid #ced4da;
+  transition: border-color 0.2s ease;
+}
+form .form-control:focus {
+  border-color: #86b7fe;
+  box-shadow: none;
+}
+
+/* Временные слоты */
+#time-slots button {
+  min-width: 100px;
+  margin: 0.5rem;
+}
+
+/* Сообщения */
+#booking-message {
+  font-size: 1.1rem;
+}
+
+/* Адаптивность */
+@media (max-width: 576px) {
+  .step-section {
+    padding: 1.5rem;
+  }
+  .btn {
+    font-size: 0.9rem;
+    padding: 0.65rem 1.25rem;
+  }
+}
