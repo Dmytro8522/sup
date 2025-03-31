@@ -133,23 +133,25 @@ def update_schedule():
         db.session.rollback()
         return jsonify({"error": "Сталася помилка при оновленні розкладу"}), 500
 
-@admin_bp.route('/bookings', methods=['GET'])
+
+@admin_bp.route("/bookings", methods=["GET"])
 @admin_required
 def admin_bookings():
-    # Для AJAX-запроса возвращаем список бронювань в JSON
     bookings = Booking.query.order_by(Booking.date.desc()).all()
     data = []
     for b in bookings:
         data.append({
             "id": b.id,
-            "user_id": b.user.id if b.user else None,
-            "equipment_id": b.equipment.id if b.equipment else None,
+            "user": b.user.name if b.user else "—",
+            "equipment": f"{b.equipment.category} – {b.equipment.subcategory}" if b.equipment else "—",
             "date": b.date.strftime("%Y-%m-%d"),
-            "hour": b.hour,
+            "time": f"{b.hour}:00" if b.hour else "—",
             "quantity": b.quantity,
-            "comment": b.comment or ""
+            "total": b.equipment.price * b.quantity if b.equipment else 0
         })
     return jsonify(data)
+
+
 
 @admin_bp.route('/export', methods=['GET'])
 @admin_required
@@ -157,15 +159,25 @@ def export_bookings():
     bookings = Booking.query.order_by(Booking.date.desc()).all()
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow([
-    b.id,
-    b.user.name if b.user else "",
-    f"{b.equipment.category} – {b.equipment.subcategory}" if b.equipment else "",
-    b.date.strftime("%Y-%m-%d"),
-    f"{b.hour}:00",
-    b.quantity,
-    b.equipment.price * b.quantity if b.equipment else 0
-])
+
+    # Заголовки
+    writer.writerow(["ID", "Користувач", "Спорядження", "Дата", "Час", "Кількість", "Всього"])
+
+    # Строки
+    for b in bookings:
+        writer.writerow([
+            b.id,
+            b.user.name if b.user else "—",
+            f"{b.equipment.category} – {b.equipment.subcategory}" if b.equipment else "—",
+            b.date.strftime("%Y-%m-%d"),
+            f"{b.hour}:00" if b.hour else "—",
+            b.quantity,
+            b.equipment.price * b.quantity if b.equipment else 0
+        ])
+
     output.seek(0)
-    return Response(output.getvalue(), mimetype='text/csv',
-                    headers={"Content-Disposition": "attachment;filename=bookings.csv"})
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={"Content-Disposition": "attachment; filename=bookings.csv"}
+    )
