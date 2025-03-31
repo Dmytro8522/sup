@@ -157,18 +157,15 @@ def export_bookings():
     bookings = Booking.query.order_by(Booking.date.desc()).all()
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["ID", "User Name", "User Email", "Equipment", "Date", "Hour", "Quantity", "Comment"])
-    for b in bookings:
-        writer.writerow([
-            b.id,
-            b.user.name if b.user else "",
-            b.user.email if b.user else "",
-            f"{b.equipment.category} - {b.equipment.subcategory}" if b.equipment else "",
-            b.date.strftime("%Y-%m-%d"),
-            f"{b.hour}:00",
-            b.quantity,
-            b.comment or ""
-        ])
+    writer.writerow([
+    b.id,
+    b.user.name if b.user else "",
+    f"{b.equipment.category} – {b.equipment.subcategory}" if b.equipment else "",
+    b.date.strftime("%Y-%m-%d"),
+    f"{b.hour}:00",
+    b.quantity,
+    b.equipment.price * b.quantity if b.equipment else 0
+])
     output.seek(0)
     return Response(output.getvalue(), mimetype='text/csv',
                     headers={"Content-Disposition": "attachment;filename=bookings.csv"})
