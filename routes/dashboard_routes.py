@@ -5,8 +5,8 @@ from app import db
 
 dashboard_bp = Blueprint('dashboard', __name__, url_prefix='/dashboard')
 
-@dashboard_bp.route('/', endpoint='dashboard_home')
-def dashboard_home():
+@dashboard_bp.route('/dashboard')
+def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('auth.login'))
     user_id = session['user_id']

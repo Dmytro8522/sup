@@ -1,43 +1,38 @@
 from extensions import db
-from datetime import datetime
 
+# Пример базовых моделей
 class User(db.Model):
-    __tablename__ = 'users'
-    id       = db.Column(db.Integer, primary_key=True)
-    name     = db.Column(db.String(100), nullable=False)
-    phone    = db.Column(db.String(20), nullable=False)
-    email    = db.Column(db.String(100), unique=True, nullable=False)
-    password = db.Column(db.String(128), nullable=False)
-    role     = db.Column(db.String(10), default='user')
-    
-    bookings = db.relationship('Booking', back_populates='user')
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100))
+    email = db.Column(db.String(100), unique=True)
+    password = db.Column(db.Text)  # если хочешь без ограничений
+    phone = db.Column(db.String(20))
+    role = db.Column(db.String(20), default='user')
 
 class Equipment(db.Model):
-    __tablename__ = 'equipment'
-    id          = db.Column(db.Integer, primary_key=True)
-    category    = db.Column(db.String(50), nullable=False)
-    subcategory = db.Column(db.String(50), nullable=False)
-    quantity    = db.Column(db.Integer, nullable=False)
-    price       = db.Column(db.Float, nullable=False, default=0.0)
-    
-    bookings   = db.relationship('Booking', back_populates='equipment')
+    id = db.Column(db.Integer, primary_key=True)
+    category = db.Column(db.String(100))
+    subcategory = db.Column(db.String(100))
+    quantity = db.Column(db.Integer)
+    price = db.Column(db.Float)
 
 class Booking(db.Model):
-    __tablename__ = 'bookings'
-    id           = db.Column(db.Integer, primary_key=True)
-    user_id      = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    equipment_id = db.Column(db.Integer, db.ForeignKey('equipment.id'), nullable=False)
-    date         = db.Column(db.Date, nullable=False)
-    hour         = db.Column(db.Integer, nullable=False)
-    quantity     = db.Column(db.Integer, nullable=False)
-    comment      = db.Column(db.String(255), nullable=True)
-    
-    user      = db.relationship('User', back_populates='bookings')
-    equipment = db.relationship('Equipment', back_populates='bookings')
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    date = db.Column(db.Date)
+    hour = db.Column(db.Integer)
+    items = db.relationship('BookingItem', backref='booking', cascade='all, delete-orphan')
+
+class BookingItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    booking_id = db.Column(db.Integer, db.ForeignKey('booking.id'))
+    equipment_id = db.Column(db.Integer, db.ForeignKey('equipment.id'))
+    quantity = db.Column(db.Integer, nullable=False)
+
+    equipment = db.relationship('Equipment')
 
 class Schedule(db.Model):
-    __tablename__ = 'schedule'
-    id          = db.Column(db.Integer, primary_key=True)
-    day_of_week = db.Column(db.Integer, nullable=False)
-    start_hour  = db.Column(db.Integer, nullable=False)
-    end_hour    = db.Column(db.Integer, nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
+    day_of_week = db.Column(db.Integer)
+    start_hour = db.Column(db.Integer)
+    end_hour = db.Column(db.Integer)
