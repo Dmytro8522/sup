@@ -1,125 +1,56 @@
-from flask import Blueprint, request, jsonify, current_app, session
+from flask import Blueprint, request, redirect, url_for, flash, session
+from models import db, Booking, Equipment
 from datetime import datetime
-from models import db, Booking, User
 
-booking_bp = Blueprint('booking', __name__, url_prefix='/api')
+booking_bp = Blueprint('booking', __name__, url_prefix='/booking')
 
-def validate_booking_data(data):
-    required_fields = ['equipment_id', 'date', 'hour', 'quantity', 'name', 'phone', 'email']
-    errors = []
-    for field in required_fields:
-        if field not in data or data[field] in [None, ""]:
-            errors.append(f"Поле {field} є обов’язковим.")
-    try:
-        qty = int(data.get('quantity', 0))
-        if qty <= 0:
-            errors.append("Кількість повинна бути більше 0.")
-    except ValueError:
-        errors.append("Кількість повинна бути числовою.")
-    try:
-        datetime.strptime(data.get('date', ''), "%Y-%m-%d")
-    except ValueError:
-        errors.append("Дата повинна бути у форматі YYYY-MM-DD.")
-    # Проверка формата часа, ожидаем "HH:MM"
-    if isinstance(data.get('hour'), str):
-        try:
-            datetime.strptime(data.get('hour'), "%H:%M")
-        except ValueError:
-            errors.append("Час повинен бути у форматі HH:MM (наприклад, 09:00).")
-    else:
-        try:
-            h = int(data.get('hour'))
-            if h < 0 or h > 23:
-                errors.append("Час повинен бути між 0 та 23.")
-        except ValueError:
-            errors.append("Час повинен бути числовим або у форматі HH:MM.")
-    return errors
-
-@booking_bp.route('/book', methods=['POST'])
+@booking_bp.route('/create', methods=['POST'])
 def create_booking():
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Невірний JSON-запит."}), 400
-
-    errors = validate_booking_data(data)
-    if errors:
-        return jsonify({"error": " ".join(errors)}), 400
-
-    # Автоматическое создание учетной записи для гостей:
-    # Если пользователь не залогинен, ищем по email; если не найден, создаем нового.
+    # Проверка, что пользователь авторизован
+    if not session.get('user_id'):
+        flash("Вам потрібно увійти", "danger")
+        return redirect(url_for('auth.login'))
+    
     user_id = session.get('user_id')
-    if not user_id:
-        email = data.get('email')
-        existing_user = User.query.filter_by(email=email).first()
-        if existing_user:
-            user_id = existing_user.id
-        else:
-            try:
-                new_user = User(
-                    name=data.get('name'),
-                    phone=data.get('phone'),
-                    email=email,
-                    password='guest',  # Для гостей временный пароль
-                    role='user'
-                )
-                db.session.add(new_user)
-                db.session.commit()
-                user_id = new_user.id
-                session['user_id'] = user_id
-            except Exception as e:
-                current_app.logger.error(f"Помилка при створенні користувача: {e}")
-                db.session.rollback()
-                return jsonify({"error": "Помилка при створенні користувача."}), 500
-
-    # Преобразование даты
+    equipment_id = request.form.get('equipment')
+    date_str = request.form.get('date')
+    time_str = request.form.get('time')
+    quantity = request.form.get('quantity')
+    
+    # Валидация обязательных полей
+    if not (equipment_id and date_str and time_str and quantity):
+        flash("Будь ласка, заповніть усі поля", "danger")
+        return redirect(url_for('dashboard.new_booking'))
+    
     try:
-        booking_date = datetime.strptime(data['date'], "%Y-%m-%d").date()
+        booking_date = datetime.strptime(date_str, "%Y-%m-%d").date()
     except ValueError:
-        return jsonify({"error": "Невірний формат дати. Використовуйте YYYY-MM-DD."}), 400
-
-    # Преобразование времени: берем часы из строки "HH:MM"
+        flash("Невірний формат дати", "danger")
+        return redirect(url_for('dashboard.new_booking'))
+    
     try:
-        hour_str = data['hour']
-        hour_int = int(hour_str.split(':')[0])
-    except Exception as e:
-        current_app.logger.error(f"Помилка при перетворенні часу: {e}")
-        return jsonify({"error": "Невірний формат часу. Використовуйте формат HH:MM."}), 400
-
+        # Получаем час из строки, например, "15:30" -> 15
+        booking_hour = int(time_str.split(":")[0])
+    except Exception:
+        flash("Невірний формат часу", "danger")
+        return redirect(url_for('dashboard.new_booking'))
+    
     try:
-        new_booking = Booking(
-            user_id=user_id,
-            equipment_id=data['equipment_id'],
-            date=booking_date,
-            hour=hour_int,
-            quantity=int(data['quantity']),
-            comment=data.get('comment', "")
-        )
-        db.session.add(new_booking)
-        db.session.commit()
-    except Exception as e:
-        current_app.logger.error(f"Помилка при створенні бронювання: {e}")
-        db.session.rollback()
-        return jsonify({"error": "Виникла помилка на сервері під час створення бронювання."}), 500
-
-    return jsonify({"message": "Бронювання підтверджено", "booking_id": new_booking.id}), 201
-
-@booking_bp.route('/bookings', methods=['GET'])
-def get_bookings():
-    try:
-        bookings = Booking.query.all()
-        result = []
-        for booking in bookings:
-            result.append({
-                "id": booking.id,
-                "user_id": booking.user_id,
-                "equipment_id": booking.equipment_id,
-                "date": booking.date.strftime("%Y-%m-%d"),
-                "hour": booking.hour,
-                "quantity": booking.quantity,
-                "comment": booking.comment
-            })
-    except Exception as e:
-        current_app.logger.error(f"Помилка при отриманні бронювань: {e}")
-        return jsonify({"error": "Виникла помилка на сервері під час отримання бронювань."}), 500
-
-    return jsonify(result), 200
+        quantity = int(quantity)
+    except ValueError:
+        flash("Невірна кількість", "danger")
+        return redirect(url_for('dashboard.new_booking'))
+    
+    # Создаем новое бронирование
+    new_booking = Booking(
+        user_id=user_id,
+        equipment_id=equipment_id,
+        date=booking_date,
+        hour=booking_hour,
+        quantity=quantity
+    )
+    db.session.add(new_booking)
+    db.session.commit()
+    
+    flash("Бронювання оформлено успішно!", "success")
+    return redirect(url_for('dashboard.dashboard'))

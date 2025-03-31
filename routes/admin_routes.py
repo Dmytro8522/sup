@@ -1,167 +1,85 @@
-from flask import Blueprint, request, jsonify, current_app
-from models import db, Equipment, Schedule, Booking, User
-import csv, io
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from functools import wraps
+from models import Equipment, Schedule, Booking
+from extensions import db
 
-admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
+admin_bp = Blueprint('admin', __name__)
 
-# --- Equipment CRUD ---
-@admin_bp.route('/equipment', methods=['GET'])
-def get_equipment():
-    try:
-        equipment_list = Equipment.query.all()
-        result = []
-        for eq in equipment_list:
-            result.append({
-                "id": eq.id,
-                "category": eq.category,
-                "subcategory": eq.subcategory,
-                "quantity": eq.quantity
-            })
-    except Exception as e:
-        current_app.logger.error(f"Error fetching equipment: {e}")
-        return jsonify({"error": "Server error fetching equipment."}), 500
-    return jsonify(result), 200
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if session.get('role') != 'admin':
+            flash("У вас немає прав доступу до адмін-панелі", "danger")
+            return redirect(url_for('auth.login'))
+        return f(*args, **kwargs)
+    return decorated
 
-@admin_bp.route('/equipment', methods=['POST'])
+@admin_bp.route('/')
+@admin_required
+def admin_index():
+    # Основная страница админ-панели
+    return render_template('admin_index.html')
+
+@admin_bp.route('/equipment')
+@admin_required
+def admin_equipment():
+    equipment_list = Equipment.query.all()
+    return render_template('admin_equipment.html', equipment=equipment_list)
+
+@admin_bp.route('/bookings')
+@admin_required
+def admin_bookings():
+    bookings = Booking.query.order_by(Booking.date.desc()).all()
+    return render_template('admin_bookings.html', bookings=bookings)
+
+@admin_bp.route('/add_equipment', methods=['POST'])
+@admin_required
 def add_equipment():
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Invalid JSON."}), 400
+    category = request.form.get('category')
+    subcategory = request.form.get('subcategory')
+    quantity = request.form.get('quantity')
+    price = request.form.get('price')
+    if not (category and subcategory and quantity and price):
+        flash("Будь ласка, заповніть усі поля", "danger")
+        return redirect(url_for('admin.admin_index'))
     try:
-        # Ожидаем поля: category, subcategory, quantity
-        category = data.get('category')
-        subcategory = data.get('subcategory')
-        quantity = int(data.get('quantity'))
-        if not (category and subcategory and quantity):
-            return jsonify({"error": "Missing fields."}), 400
-        new_eq = Equipment(category=category, subcategory=subcategory, quantity=quantity)
+        new_eq = Equipment(
+            category=category,
+            subcategory=subcategory,
+            quantity=int(quantity),
+            price=float(price)
+        )
         db.session.add(new_eq)
         db.session.commit()
+        flash("Обладнання додано успішно!", "success")
     except Exception as e:
-        current_app.logger.error(f"Error adding equipment: {e}")
         db.session.rollback()
-        return jsonify({"error": "Error adding equipment."}), 500
-    return jsonify({"message": "Equipment added", "id": new_eq.id}), 201
+        flash("Сталася помилка при додаванні обладнання", "danger")
+    return redirect(url_for('admin.admin_equipment'))
 
-@admin_bp.route('/equipment/<int:eq_id>', methods=['PUT'])
-def update_equipment(eq_id):
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Invalid JSON."}), 400
+@admin_bp.route('/update_schedule', methods=['POST'])
+@admin_required
+def update_schedule():
+    day_of_week = request.form.get('day_of_week')
+    start_hour = request.form.get('start_hour')
+    end_hour = request.form.get('end_hour')
+    if not (day_of_week and start_hour and end_hour):
+        flash("Будь ласка, заповніть усі поля", "danger")
+        return redirect(url_for('admin.admin_index'))
     try:
-        eq = Equipment.query.get_or_404(eq_id)
-        if 'category' in data:
-            eq.category = data['category']
-        if 'subcategory' in data:
-            eq.subcategory = data['subcategory']
-        if 'quantity' in data:
-            eq.quantity = int(data['quantity'])
-        db.session.commit()
-    except Exception as e:
-        current_app.logger.error(f"Error updating equipment: {e}")
-        db.session.rollback()
-        return jsonify({"error": "Error updating equipment."}), 500
-    return jsonify({"message": "Equipment updated"}), 200
-
-@admin_bp.route('/equipment/<int:eq_id>', methods=['DELETE'])
-def delete_equipment(eq_id):
-    try:
-        eq = Equipment.query.get_or_404(eq_id)
-        db.session.delete(eq)
-        db.session.commit()
-    except Exception as e:
-        current_app.logger.error(f"Error deleting equipment: {e}")
-        db.session.rollback()
-        return jsonify({"error": "Error deleting equipment."}), 500
-    return jsonify({"message": "Equipment deleted"}), 200
-
-# --- Schedule CRUD ---
-@admin_bp.route('/schedule', methods=['GET'])
-def get_schedule():
-    try:
-        schedule_list = Schedule.query.all()
-        result = []
-        for sch in schedule_list:
-            result.append({
-                "id": sch.id,
-                "day_of_week": sch.day_of_week,
-                "start_hour": sch.start_hour,
-                "end_hour": sch.end_hour
-            })
-    except Exception as e:
-        current_app.logger.error(f"Error fetching schedule: {e}")
-        return jsonify({"error": "Server error fetching schedule."}), 500
-    return jsonify(result), 200
-
-@admin_bp.route('/schedule', methods=['POST'])
-def set_schedule():
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Invalid JSON."}), 400
-    try:
-        day = int(data.get('day_of_week'))
-        start = int(data.get('start_hour'))
-        end = int(data.get('end_hour'))
-        if start >= end:
-            return jsonify({"error": "Start hour must be less than end hour."}), 400
-        sch = Schedule.query.filter_by(day_of_week=day).first()
-        if sch:
-            sch.start_hour = start
-            sch.end_hour = end
+        day = int(day_of_week)
+        start = int(start_hour)
+        end = int(end_hour)
+        schedule = Schedule.query.filter_by(day_of_week=day).first()
+        if schedule:
+            schedule.start_hour = start
+            schedule.end_hour = end
         else:
-            sch = Schedule(day_of_week=day, start_hour=start, end_hour=end)
-            db.session.add(sch)
+            schedule = Schedule(day_of_week=day, start_hour=start, end_hour=end)
+            db.session.add(schedule)
         db.session.commit()
+        flash("Розклад оновлено успішно!", "success")
     except Exception as e:
-        current_app.logger.error(f"Error setting schedule: {e}")
         db.session.rollback()
-        return jsonify({"error": "Error setting schedule."}), 500
-    return jsonify({"message": f"Schedule updated for day {day}."}), 200
-
-# --- Bookings ---
-@admin_bp.route('/bookings', methods=['GET'])
-def get_admin_bookings():
-    try:
-        bookings = Booking.query.all()
-        result = []
-        for booking in bookings:
-            result.append({
-                "id": booking.id,
-                "user_id": booking.user_id,
-                "equipment_id": booking.equipment_id,
-                "date": booking.date.strftime("%Y-%m-%d"),
-                "hour": booking.hour,
-                "quantity": booking.quantity,
-                "comment": booking.comment
-            })
-    except Exception as e:
-        current_app.logger.error(f"Error fetching bookings: {e}")
-        return jsonify({"error": "Server error fetching bookings."}), 500
-    return jsonify(result), 200
-
-# --- Export ---
-@admin_bp.route('/export', methods=['GET'])
-def export_bookings():
-    try:
-        bookings = Booking.query.all()
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(['ID', 'User ID', 'Equipment ID', 'Date', 'Hour', 'Quantity', 'Comment'])
-        for booking in bookings:
-            writer.writerow([
-                booking.id,
-                booking.user_id,
-                booking.equipment_id,
-                booking.date.strftime("%Y-%m-%d"),
-                booking.hour,
-                booking.quantity,
-                booking.comment or ""
-            ])
-        output.seek(0)
-        return output.getvalue(), 200, {
-            "Content-Type": "text/csv; charset=utf-8",
-            "Content-Disposition": "attachment; filename=bookings.csv"
-        }
-    except Exception as e:
-        current_app.logger.error(f"Error exporting bookings: {e}")
-        return jsonify({"error": "Error exporting bookings."}), 500
+        flash("Сталася помилка при оновленні розкладу", "danger")
+    return redirect(url_for('admin.admin_index'))

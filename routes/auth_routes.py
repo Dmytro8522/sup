@@ -1,4 +1,4 @@
-from flask import Blueprint, request, redirect, url_for, render_template, session, jsonify
+from flask import Blueprint, request, session, redirect, url_for, render_template, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, User
 
@@ -11,20 +11,18 @@ def register():
         phone = request.form.get('phone')
         email = request.form.get('email')
         password = request.form.get('password')
-        role = request.form.get('role', 'user')  # По умолчанию все пользователи - обычные пользователи
         if not (name and phone and email and password):
-            return "Будь ласка, заповніть усі поля", 400
+            flash("Будь ласка, заповніть усі поля", "danger")
+            return render_template('register.html')
         if User.query.filter_by(email=email).first():
-            return "Користувач з таким email вже існує", 400
+            flash("Користувач з таким email вже існує", "danger")
+            return render_template('register.html')
         new_user = User(name=name, phone=phone, email=email,
-                        password=generate_password_hash(password), role=role)
+                        password=generate_password_hash(password), role='user')
         db.session.add(new_user)
         db.session.commit()
-        session['user_id'] = new_user.id
-        session['role'] = new_user.role
-        if new_user.role == 'admin':
-            return redirect(url_for('admin.index'))  # Перенаправляем администратора в админ-панель
-        return redirect(url_for('index'))
+        flash("Реєстрація пройшла успішно, тепер увійдіть", "success")
+        return redirect(url_for('auth.login'))
     return render_template('register.html')
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
@@ -36,13 +34,21 @@ def login():
         if user and check_password_hash(user.password, password):
             session['user_id'] = user.id
             session['role'] = user.role
+            session['name'] = user.name
+            flash("Ви успішно увійшли!", "success")
+            # Если пользователь администратор, перенаправляем в адмін-панель
             if user.role == 'admin':
-                return redirect(url_for('admin.index'))  # Перенаправляем администратора
-            return redirect(url_for('index'))
-        return "Невірний email або пароль", 401
+                return redirect(url_for('admin.admin_index'))
+            else:
+                return redirect(url_for('dashboard.dashboard'))
+        else:
+            flash("Невірний email або пароль", "danger")
+            return render_template('login.html')
     return render_template('login.html')
+
 
 @auth_bp.route('/logout')
 def logout():
     session.clear()
+    flash("Ви вийшли", "info")
     return redirect(url_for('index'))

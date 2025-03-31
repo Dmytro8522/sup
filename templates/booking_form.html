@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Нове бронювання - Веслувальний клуб SUPSUN</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+  <!-- Header (тот же, что и на dashboard) -->
+  <header class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+    <div class="container d-flex justify-content-between align-items-center">
+      <a class="navbar-brand" href="{{ url_for('dashboard.dashboard') }}">
+        <img src="https://supsun.club/wp-content/uploads/2023/10/xsupsun_text_logo.png.pagespeed.ic.PAnVO98De2.png" alt="SUPSUN Logo" style="height: 40px;">
+      </a>
+      <div class="collapse navbar-collapse">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><span class="nav-link">Вітаємо, {{ user.name }}</span></li>
+          <li class="nav-item"><a class="nav-link btn btn-outline-primary ms-2" href="{{ url_for('auth.logout') }}">Вийти</a></li>
+        </ul>
+      </div>
+    </div>
+  </header>
+
+  <!-- Форма нового бронирования -->
+  <main class="container my-5">
+    <h2>Нове бронювання</h2>
+    <form method="POST" action="{{ url_for('booking.create_booking') }}">
+      <div class="form-check mb-3">
+        <input class="form-check-input" type="checkbox" id="useAccountData" name="use_account_data" onchange="toggleAccountData(this)">
+        <label class="form-check-label" for="useAccountData">
+          Використовувати дані акаунта ({{ user.name }}, {{ user.phone }}, {{ user.email }})
+        </label>
+      </div>
+      <div class="mb-3">
+        <label for="name" class="form-label">Ім’я:</label>
+        <input type="text" id="name" name="name" class="form-control" placeholder="Ваше ім’я" value="{{ user.name }}" required>
+      </div>
+      <div class="mb-3">
+        <label for="phone" class="form-label">Телефон:</label>
+        <input type="tel" id="phone" name="phone" class="form-control" placeholder="Ваш телефон" value="{{ user.phone }}" required>
+      </div>
+      <div class="mb-3">
+        <label for="email" class="form-label">Email:</label>
+        <input type="email" id="email" name="email" class="form-control" placeholder="Ваш email" value="{{ user.email }}" required>
+      </div>
+      <!-- Остальные поля бронирования -->
+      <div class="mb-3">
+        <label for="equipment" class="form-label">Обладнання:</label>
+        <select id="equipment" name="equipment" class="form-select" required>
+          {% for eq in equipment_list %}
+          <option value="{{ eq.id }}" data-price="{{ eq.price }}">{{ eq.category }} - {{ eq.subcategory }} ({{ eq.price }} ₴)</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="mb-3">
+        <label for="date" class="form-label">Дата:</label>
+        <input type="date" id="date" name="date" class="form-control" required>
+      </div>
+      <div class="mb-3">
+        <label for="time" class="form-label">Час:</label>
+        <input type="time" id="time" name="time" class="form-control" required>
+      </div>
+      <div class="mb-3">
+        <label for="quantity" class="form-label">Кількість:</label>
+        <input type="number" id="quantity" name="quantity" class="form-control" min="1" value="1" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Ітогова сума:</label>
+        <p id="totalAmount">0 ₴</p>
+      </div>
+      <!-- Скрытые поля, если нужно -->
+      <button type="submit" class="btn btn-success">Забронювати</button>
+    </form>
+  </main>
+
+  <!-- Bootstrap 5 JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // JS для автозаполнения данных при выборе "Использовать данные аккаунта"
+    function toggleAccountData(checkbox) {
+      if (checkbox.checked) {
+        // Если включено, заблокировать поля и подставить данные
+        document.getElementById('name').readOnly = true;
+        document.getElementById('phone').readOnly = true;
+        document.getElementById('email').readOnly = true;
+      } else {
+        // Разблокировать поля
+        document.getElementById('name').readOnly = false;
+        document.getElementById('phone').readOnly = false;
+        document.getElementById('email').readOnly = false;
+      }
+    }
+
+    // Пересчет итоговой суммы при изменении количества или выборе оборудования
+    document.getElementById('quantity').addEventListener('input', calculateTotal);
+    document.getElementById('equipment').addEventListener('change', calculateTotal);
+
+    function calculateTotal() {
+      const equipmentSelect = document.getElementById('equipment');
+      const selectedOption = equipmentSelect.options[equipmentSelect.selectedIndex];
+      const price = parseFloat(selectedOption.getAttribute('data-price')) || 0;
+      const quantity = parseInt(document.getElementById('quantity').value) || 0;
+      const total = price * quantity;
+      document.getElementById('totalAmount').textContent = total.toFixed(2) + " ₴";
+    }
+
+    // Инициализировать пересчет при загрузке
+    calculateTotal();
+  </script>
+</body>
+</html>
