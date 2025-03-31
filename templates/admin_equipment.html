@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Обладнання – Адмін-панель SUPSUN</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+</head>
+<body>
+<header class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+  <div class="container d-flex justify-content-between align-items-center">
+    <a class="navbar-brand" href="{{ url_for('admin.admin_index') }}">
+      <img src="https://supsun.club/wp-content/uploads/2023/10/xsupsun_text_logo.png" alt="SUPSUN Logo" style="height: 40px;" />
+    </a>
+    <ul class="navbar-nav ms-auto">
+      <li class="nav-item"><span class="nav-link">Вітаємо, {{ session.get('name') }}</span></li>
+      <li class="nav-item"><a class="nav-link btn btn-outline-primary ms-2" href="{{ url_for('auth.logout') }}">Вийти</a></li>
+    </ul>
+  </div>
+</header>
+<main class="container my-5">
+  <h2>Керування обладнанням</h2>
+  <hr>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+  
+  <h4>Список обладнання</h4>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Категорія</th>
+        <th>Підкатегорія</th>
+        <th>Кількість</th>
+        <th>Ціна, грн</th>
+        <th>Дії</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in equipment_list %}
+      <tr>
+        <td>{{ item.id }}</td>
+        <td>{{ item.category }}</td>
+        <td>{{ item.subcategory }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>{{ item.price }}</td>
+        <td>
+          <a href="{{ url_for('admin.edit_equipment', equipment_id=item.id) }}" class="btn btn-sm btn-secondary">Редагувати</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  
+  <hr>
+  <h4 class="mt-4">Додати нове обладнання</h4>
+  <form action="{{ url_for('admin.add_equipment') }}" method="post" class="row g-3 align-items-end">
+    <div class="col-md-3">
+      <input type="text" name="category" class="form-control" placeholder="Категорія" required>
+    </div>
+    <div class="col-md-3">
+      <input type="text" name="subcategory" class="form-control" placeholder="Підкатегорія" required>
+    </div>
+    <div class="col-md-2">
+      <input type="number" name="quantity" class="form-control" placeholder="Кількість" required>
+    </div>
+    <div class="col-md-2">
+      <input type="number" step="0.01" name="price" class="form-control" placeholder="Ціна" required>
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary">Додати</button>
+    </div>
+  </form>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

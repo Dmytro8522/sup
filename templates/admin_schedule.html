@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Розклад – Адмін-панель SUPSUN</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+</head>
+<body>
+<header class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+  <div class="container d-flex justify-content-between align-items-center">
+    <a class="navbar-brand" href="{{ url_for('admin.admin_index') }}">
+      <img src="https://supsun.club/wp-content/uploads/2023/10/xsupsun_text_logo.png" alt="SUPSUN Logo" style="height: 40px;" />
+    </a>
+    <ul class="navbar-nav ms-auto">
+      <li class="nav-item"><span class="nav-link">Вітаємо, {{ session.get('name') }}</span></li>
+      <li class="nav-item"><a class="nav-link btn btn-outline-primary ms-2" href="{{ url_for('auth.logout') }}">Вийти</a></li>
+    </ul>
+  </div>
+</header>
+<main class="container my-5">
+  <h2>Керування розкладом</h2>
+  <hr>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+  
+  <h4>Поточний розклад роботи</h4>
+  <table class="table table-bordered w-auto">
+    <thead>
+      <tr>
+        <th>День тижня</th>
+        <th>Початок роботи</th>
+        <th>Кінець роботи</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% set day_names = {1:"Понеділок", 2:"Вівторок", 3:"Середа", 4:"Четвер", 5:"П'ятниця", 6:"Субота", 7:"Неділя"} %}
+      {% for day in range(1, 8) %}
+      <tr>
+        <td>{{ day_names[day] }}</td>
+        {% if schedule.get(day) %}
+          <td>{{ schedule[day].start_hour }}:00</td>
+          <td>{{ schedule[day].end_hour }}:00</td>
+        {% else %}
+          <td colspan="2" class="text-muted">не встановлено</td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  
+  <hr>
+  <h4 class="mt-4">Оновити розклад</h4>
+  <form action="{{ url_for('admin.update_schedule') }}" method="post" class="row g-3 align-items-end">
+    <div class="col-md-4">
+      <label for="day_of_week" class="form-label">День тижня</label>
+      <select id="day_of_week" name="day_of_week" class="form-select" required>
+        <option disabled selected value="">Оберіть день</option>
+        <option value="1">Понеділок</option>
+        <option value="2">Вівторок</option>
+        <option value="3">Середа</option>
+        <option value="4">Четвер</option>
+        <option value="5">П'ятниця</option>
+        <option value="6">Субота</option>
+        <option value="7">Неділя</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label for="start_hour" class="form-label">Початок (година 0-23)</label>
+      <input type="number" id="start_hour" name="start_hour" class="form-control" min="0" max="23" required>
+    </div>
+    <div class="col-md-3">
+      <label for="end_hour" class="form-label">Завершення (година 0-23)</label>
+      <input type="number" id="end_hour" name="end_hour" class="form-control" min="0" max="23" required>
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary">Зберегти</button>
+    </div>
+  </form>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

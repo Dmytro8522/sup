@@ -3,39 +3,254 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Адмін-панель - Веслувальний клуб SUPSUN</title>
+  <title>Адмінпанель – Веслувальний клуб SUPSUN</title>
   <!-- Bootstrap 5 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Custom styles -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
-  <header class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+  <header class="py-3 mb-4 border-bottom">
     <div class="container d-flex justify-content-between align-items-center">
-      <a class="navbar-brand" href="{{ url_for('admin.admin_index') }}">
-        <img src="https://supsun.club/wp-content/uploads/2023/10/xsupsun_text_logo.png.pagespeed.ic.PAnVO98De2.png" alt="SUPSUN Logo" style="height: 40px;">
-      </a>
-      <ul class="navbar-nav ms-auto">
-        <li class="nav-item"><span class="nav-link">Вітаємо, {{ session.get('name') }}</span></li>
-        <li class="nav-item"><a class="nav-link btn btn-outline-primary ms-2" href="{{ url_for('auth.logout') }}">Вийти</a></li>
-      </ul>
+      <img src="https://supsun.club/wp-content/uploads/2023/10/xsupsun_text_logo.png.pagespeed.ic.PAnVO98De2.png" alt="SUPSUN Logo" class="logo" style="max-height: 60px;">
+      <h1 class="h4">Адмінпанель</h1>
     </div>
   </header>
-  <main class="container my-5">
-    <h2>Адмін-панель</h2>
-    <hr>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category }}">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-    <div class="mb-4">
-      <a href="{{ url_for('admin.admin_equipment') }}" class="btn btn-primary me-2">Керування обладнанням</a>
-      <a href="{{ url_for('admin.update_schedule') }}" class="btn btn-primary me-2">Керування розкладом</a>
-      <a href="{{ url_for('admin.admin_bookings') }}" class="btn btn-primary">Перегляд бронювань</a>
+  <main class="container">
+    <!-- Навигационные вкладки -->
+    <ul class="nav nav-tabs" id="adminTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="equipment-tab" data-bs-toggle="tab" data-bs-target="#equipment" type="button" role="tab">Спорядження</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="schedule-tab" data-bs-toggle="tab" data-bs-target="#schedule" type="button" role="tab">Розклад</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="bookings-tab" data-bs-toggle="tab" data-bs-target="#bookings" type="button" role="tab">Бронювання</button>
+      </li>
+      <li class="nav-item ms-auto" role="presentation">
+        <button class="btn btn-outline-primary" id="exportBtn">Експорт в Excel</button>
+      </li>
+    </ul>
+    <div class="tab-content mt-3" id="adminTabsContent">
+      <!-- Вкладка Спорядження -->
+      <div class="tab-pane fade show active" id="equipment" role="tabpanel">
+        <h2 class="h5">Список спорядження</h2>
+        <div id="equipmentList"></div>
+        <hr>
+        <h3 class="h6">Додати нове спорядження</h3>
+        <form id="equipmentForm">
+          <div class="mb-3">
+            <label for="eqCategory" class="form-label">Категорія</label>
+            <select id="eqCategory" class="form-select">
+              <option value="Катамарани">Катамарани</option>
+              <option value="САП-дошки">САП-дошки</option>
+              <option value="Каяки">Каяки</option>
+              <option value="Аутрігери">Аутрігери</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="eqSubcategory" class="form-label">Підкатегорія</label>
+            <select id="eqSubcategory" class="form-select">
+              <option value="Стандарт">Стандарт</option>
+              <option value="Преміум">Преміум</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="eqQuantity" class="form-label">Кількість</label>
+            <input type="number" id="eqQuantity" class="form-control" min="1" required>
+          </div>
+          <div class="mb-3">
+            <label for="eqPrice" class="form-label">Ціна, грн</label>
+            <input type="number" id="eqPrice" class="form-control" step="0.01" required>
+          </div>
+          <button type="submit" class="btn btn-primary">Додати спорядження</button>
+        </form>
+      </div>
+      <!-- Вкладка Розклад -->
+      <div class="tab-pane fade" id="schedule" role="tabpanel">
+        <h2 class="h5">Налаштування розкладу роботи</h2>
+        <div id="scheduleList"></div>
+        <hr>
+        <h3 class="h6">Оновити графік</h3>
+        <form id="scheduleForm">
+          <div class="mb-3">
+            <label for="schDay" class="form-label">День тижня</label>
+            <select id="schDay" class="form-select">
+              <option value="0">Понеділок</option>
+              <option value="1">Вівторок</option>
+              <option value="2">Середа</option>
+              <option value="3">Четвер</option>
+              <option value="4">П'ятниця</option>
+              <option value="5">Субота</option>
+              <option value="6">Неділя</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="schStart" class="form-label">Початок (година)</label>
+            <input type="number" id="schStart" class="form-control" min="0" max="23" required>
+          </div>
+          <div class="mb-3">
+            <label for="schEnd" class="form-label">Кінець (година)</label>
+            <input type="number" id="schEnd" class="form-control" min="1" max="24" required>
+          </div>
+          <button type="submit" class="btn btn-primary">Оновити розклад</button>
+        </form>
+      </div>
+      <!-- Вкладка Бронювання -->
+      <div class="tab-pane fade" id="bookings" role="tabpanel">
+        <h2 class="h5">Список бронювань</h2>
+        <div id="bookingsList"></div>
+      </div>
     </div>
   </main>
+
+  <!-- Подключение скриптов -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Загрузка списка оборудования
+      function loadEquipment() {
+        fetch('/admin/equipment')
+          .then(response => response.json())
+          .then(data => {
+            const equipmentList = document.getElementById('equipmentList');
+            equipmentList.innerHTML = "";
+            if (data.length === 0) {
+              equipmentList.innerHTML = "<p>Спорядження не знайдено.</p>";
+            } else {
+              data.forEach(eq => {
+                const div = document.createElement('div');
+                div.className = "d-flex justify-content-between align-items-center border p-2 mb-2";
+                div.innerHTML = `<span>ID: ${eq.id} | ${eq.category} - ${eq.subcategory} | Кількість: ${eq.quantity} | Ціна: ${eq.price} грн</span>
+                <div>
+                  <button class="btn btn-sm btn-warning me-2" onclick="editEquipment(${eq.id})">Редагувати</button>
+                  <button class="btn btn-sm btn-danger" onclick="deleteEquipment(${eq.id})">Видалити</button>
+                </div>`;
+                equipmentList.appendChild(div);
+              });
+            }
+          });
+      }
+
+      // Добавление оборудования
+      document.getElementById('equipmentForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const category = document.getElementById('eqCategory').value;
+        const subcategory = document.getElementById('eqSubcategory').value;
+        const quantity = document.getElementById('eqQuantity').value;
+        const price = document.getElementById('eqPrice').value;
+        fetch('/admin/equipment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ category, subcategory, quantity, price })
+        })
+        .then(response => response.json())
+        .then(data => {
+          alert(data.message || data.error);
+          loadEquipment();
+        });
+      });
+
+      // Редактирование оборудования через prompt
+      window.editEquipment = function(id) {
+        const newQuantity = prompt("Введіть нову кількість:");
+        if (newQuantity !== null) {
+          fetch(`/admin/equipment/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ quantity: newQuantity })
+          })
+          .then(response => response.json())
+          .then(data => {
+            alert(data.message || data.error);
+            loadEquipment();
+          });
+        }
+      };
+
+      // Удаление оборудования
+      window.deleteEquipment = function(id) {
+        if (confirm("Ви впевнені, що хочете видалити це спорядження?")) {
+          fetch(`/admin/equipment/${id}`, { method: 'DELETE' })
+            .then(response => response.json())
+            .then(data => {
+              alert(data.message || data.error);
+              loadEquipment();
+            });
+        }
+      };
+
+      // Загрузка расписания
+      function loadSchedule() {
+        fetch('/admin/schedule')
+          .then(response => response.json())
+          .then(data => {
+            const scheduleList = document.getElementById('scheduleList');
+            scheduleList.innerHTML = "";
+            if (data.length === 0) {
+              scheduleList.innerHTML = "<p>Розклад не налаштовано.</p>";
+            } else {
+              data.forEach(sch => {
+                const p = document.createElement('p');
+                const days = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"];
+                p.textContent = `День: ${days[sch.day_of_week]}, з ${sch.start_hour}:00 до ${sch.end_hour}:00`;
+                scheduleList.appendChild(p);
+              });
+            }
+          });
+      }
+
+      // Обработчик формы расписания
+      document.getElementById('scheduleForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const day_of_week = document.getElementById('schDay').value;
+        const start_hour = document.getElementById('schStart').value;
+        const end_hour = document.getElementById('schEnd').value;
+        fetch('/admin/schedule', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ day_of_week, start_hour, end_hour })
+        })
+        .then(response => response.json())
+        .then(data => {
+          alert(data.message || data.error);
+          loadSchedule();
+        });
+      });
+
+      // Загрузка бронирований
+      function loadBookings() {
+        fetch('/admin/bookings')
+          .then(response => response.json())
+          .then(data => {
+            const bookingsList = document.getElementById('bookingsList');
+            bookingsList.innerHTML = "";
+            if (data.length === 0) {
+              bookingsList.innerHTML = "<p>Бронювання не знайдено.</p>";
+            } else {
+              data.forEach(booking => {
+                const div = document.createElement('div');
+                div.className = "border p-2 mb-2";
+                div.innerHTML = `<p>ID: ${booking.id} | Користувач: ${booking.user_id} | Спорядження: ${booking.equipment_id}</p>
+                <p>Дата: ${booking.date} | Час: ${booking.hour}:00 | Кількість: ${booking.quantity}</p>
+                <p>Коментар: ${booking.comment}</p>`;
+                bookingsList.appendChild(div);
+              });
+            }
+          });
+      }
+
+      // Экспорт бронирований
+      document.getElementById('exportBtn').addEventListener('click', () => {
+        window.location.href = '/admin/export';
+      });
+
+      // Инициализация загрузки данных
+      loadEquipment();
+      loadSchedule();
+      loadBookings();
+    });
+  </script>
 </body>
 </html>
