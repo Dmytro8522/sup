@@ -20,6 +20,9 @@ from routes.dashboard_routes import dashboard_bp
 from routes.auth_routes import auth_bp
 from routes.booking_routes import booking_bp
 from routes.admin_routes import admin_bp
+from routes.public_routes import public_bp
+app.register_blueprint(public_bp)
+
 
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(auth_bp)

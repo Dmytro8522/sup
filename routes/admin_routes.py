@@ -1,6 +1,9 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, Response
 from functools import wraps
 from models import Equipment, Schedule, Booking, User
+from flask import send_file
+from datetime import datetime
+from io import BytesIO
 from extensions import db
 import csv
 import io
@@ -139,45 +142,52 @@ def update_schedule():
 def admin_bookings():
     bookings = Booking.query.order_by(Booking.date.desc()).all()
     data = []
-    for b in bookings:
-        data.append({
-            "id": b.id,
-            "user": b.user.name if b.user else "—",
-            "equipment": f"{b.equipment.category} – {b.equipment.subcategory}" if b.equipment else "—",
-            "date": b.date.strftime("%Y-%m-%d"),
-            "time": f"{b.hour}:00" if b.hour else "—",
-            "quantity": b.quantity,
-            "total": b.equipment.price * b.quantity if b.equipment else 0
-        })
+    for booking in bookings:
+        user = booking.user
+        for item in booking.items:
+            equipment = item.equipment
+            data.append({
+                "id": booking.id,
+                "user": user.name if user else "—",
+                "equipment": f"{equipment.category} – {equipment.subcategory}" if equipment else "—",
+                "date": booking.date.strftime("%Y-%m-%d"),
+                "time": f"{booking.hour}:00" if booking.hour else "—",
+                "quantity": item.quantity,
+                "total": item.total_price if hasattr(item, 'total_price') else (equipment.price * item.quantity if equipment else 0)
+            })
     return jsonify(data)
 
 
 
-@admin_bp.route('/export', methods=['GET'])
-@admin_required
+@admin_bp.route('/export')
 def export_bookings():
-    bookings = Booking.query.order_by(Booking.date.desc()).all()
-    output = io.StringIO()
-    writer = csv.writer(output)
+    output = BytesIO()
+    writer = csv.writer(io.TextIOWrapper(output, encoding='utf-8', newline=''))
 
-    # Заголовки
-    writer.writerow(["ID", "Користувач", "Спорядження", "Дата", "Час", "Кількість", "Всього"])
+    writer.writerow(['Ім’я', 'Email', 'Телефон', 'Дата', 'Час', 'Категорія', 'Підкатегорія', 'Кількість'])
 
-    # Строки
-    for b in bookings:
-        writer.writerow([
-            b.id,
-            b.user.name if b.user else "—",
-            f"{b.equipment.category} – {b.equipment.subcategory}" if b.equipment else "—",
-            b.date.strftime("%Y-%m-%d"),
-            f"{b.hour}:00" if b.hour else "—",
-            b.quantity,
-            b.equipment.price * b.quantity if b.equipment else 0
-        ])
+    bookings = Booking.query.all()
+
+    for booking in bookings:
+        user = booking.user
+        for item in booking.items:
+            equipment = item.equipment
+            writer.writerow([
+                user.name,
+                user.email,
+                user.phone,
+                booking.date.strftime('%Y-%m-%d'),
+                booking.hour,
+                equipment.category,
+                equipment.subcategory,
+                item.quantity
+            ])
 
     output.seek(0)
-    return Response(
-        output.getvalue(),
+
+    return send_file(
+        output,
         mimetype='text/csv',
-        headers={"Content-Disposition": "attachment; filename=bookings.csv"}
+        download_name=f'bookings_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.csv',
+        as_attachment=True
     )

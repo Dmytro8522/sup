@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".category-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       selectedCategory = btn.dataset.category;
-      fetch("/admin/equipment")
+      fetch("/equipment")
         .then(res => res.json())
         .then(data => {
           subcatButtons.innerHTML = "";

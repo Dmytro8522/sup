@@ -19,6 +19,7 @@ class Equipment(db.Model):
 class Booking(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user = db.relationship('User', backref='bookings')
     date = db.Column(db.Date)
     hour = db.Column(db.Integer)
     items = db.relationship('BookingItem', backref='booking', cascade='all, delete-orphan')

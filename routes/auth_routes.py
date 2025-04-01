@@ -37,20 +37,34 @@ def login():
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
+        print(f"[DEBUG] Введён email: {email}, пароль: {password}")
+
         user = User.query.filter_by(email=email).first()
-        if user and check_password_hash(user.password, password):
-            session['user_id'] = user.id
-            session['role'] = user.role
-            session['name'] = user.name
-            flash("Ви успішно увійшли!", "success")
-            if user.role and user.role.lower() == 'admin':
-                return redirect(url_for('admin.admin_index'))
+
+        if user:
+            print(f"[DEBUG] Найден пользователь: {user.email}, роль: {user.role}")
+            if check_password_hash(user.password, password):
+                session['user_id'] = user.id
+                session['role'] = user.role
+                session['name'] = user.name
+                flash("Ви успішно увійшли!", "success")
+
+                if user.role and user.role.lower() == 'admin':
+                    print("[DEBUG] Редирект на admin.admin_index")
+                    return redirect(url_for('admin.admin_index'))
+                else:
+                    print("[DEBUG] Редирект на dashboard.dashboard")
+                    return redirect(url_for('dashboard.dashboard'))
             else:
-                return redirect(url_for('dashboard.dashboard'))
+                print("[DEBUG] Пароль не підходить")
         else:
-            flash("Невірний email або пароль", "danger")
-            return render_template('login.html')
+            print("[DEBUG] Користувач не знайдений")
+
+        flash("Невірний email або пароль", "danger")
+
     return render_template('login.html')
+
+
 
 @auth_bp.route('/logout')
 def logout():

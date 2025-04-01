@@ -265,5 +265,38 @@
       loadBookings();
     });
   </script>
+
+<script>
+  const subcategoriesByCategory = {
+    'Катамарани': ['Катамаран'],
+    'САП-дошки': ['Спортивні', 'Туристичні', 'Дитячі'],
+    'Каяки': ['1-місні', '2-місні', '3-місні'],
+    'Аутрігери': ['1-місні', '2-місні']
+  };
+
+  const categorySelect = document.getElementById('eqCategory');
+  const subcategorySelect = document.getElementById('eqSubcategory');
+
+  categorySelect.addEventListener('change', () => {
+    const selectedCategory = categorySelect.value;
+    const subcategories = subcategoriesByCategory[selectedCategory] || [];
+
+    subcategorySelect.innerHTML = '';
+    subcategories.forEach(sub => {
+      const option = document.createElement('option');
+      option.value = sub;
+      option.textContent = sub;
+      subcategorySelect.appendChild(option);
+    });
+  });
+
+  // Инициализация подкатегорий при загрузке страницы
+  document.addEventListener('DOMContentLoaded', () => {
+    const event = new Event('change');
+    categorySelect.dispatchEvent(event);
+  });
+</script>
+
 </body>
+
 </html>
