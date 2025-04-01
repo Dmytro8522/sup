@@ -1,0 +1,15 @@
+app = "sup-booking"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  FLASK_ENV = "production"
+  DATABASE_URL = "postgresql://sup_booking_db_user:E1hLdHXFClnpuqR1xelP13PirTc0X68a@dpg-cvlpi824d50c73e62ei0-a/sup_booking_db"
+
+[http_service]
+  internal_port = 5000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 1
