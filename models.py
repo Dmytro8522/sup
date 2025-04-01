@@ -22,7 +22,7 @@ class Booking(db.Model):
     user = db.relationship('User', backref='bookings')
     date = db.Column(db.Date)
     hour = db.Column(db.Integer)
-    items = db.relationship('BookingItem', backref='booking', cascade='all, delete-orphan')
+    items = db.relationship("BookingItem", backref="booking", lazy=True)
 
 class BookingItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)

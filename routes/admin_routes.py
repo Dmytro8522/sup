@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, Response
 from functools import wraps
-from models import Equipment, Schedule, Booking, User
+from models import Equipment, BookingItem, Schedule, Booking, User
 from flask import send_file
 from datetime import datetime
 from io import BytesIO
@@ -160,6 +160,7 @@ def admin_bookings():
 
 
 @admin_bp.route('/export')
+@admin_required
 def export_bookings():
     output = BytesIO()
     writer = csv.writer(io.TextIOWrapper(output, encoding='utf-8', newline=''))
@@ -173,13 +174,13 @@ def export_bookings():
         for item in booking.items:
             equipment = item.equipment
             writer.writerow([
-                user.name,
-                user.email,
-                user.phone,
-                booking.date.strftime('%Y-%m-%d'),
-                booking.hour,
-                equipment.category,
-                equipment.subcategory,
+                user.name if user else "—",
+                user.email if user else "—",
+                user.phone if user else "—",
+                booking.date.strftime('%Y-%m-%d') if booking.date else "—",
+                f"{booking.hour}:00" if booking.hour is not None else "—",
+                equipment.category if equipment else "—",
+                equipment.subcategory if equipment else "—",
                 item.quantity
             ])
 
